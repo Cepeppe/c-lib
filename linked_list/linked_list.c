@@ -315,13 +315,12 @@ void linked_list_debug_print(LinkedList list, void (*print_data)(void*)) {
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     }
 
-    /* Special case: logically empty list */
+    /* empty logical list */
     if (is_linked_list_empty(list)) {
-        printf("[HEAD|EMPTY] -> NULL\n");
+        printf("[HEAD|EMPTY @%p] -> NULL\n", (void*)list);
         return;
     }
 
-    /* Caso generale: almeno un elemento utile */
     printf("[HEAD] ");
 
     LinkedList curr = list;
@@ -329,14 +328,13 @@ void linked_list_debug_print(LinkedList list, void (*print_data)(void*)) {
 
     while (curr != NULL) {
 
-        /* print node in a "box" ASCII */
-        printf("-> [#%zu | data=", index);
+        /* example: -> [#0 @0x12345678 | data=...] */
+        printf("[#%zu | 0x%p | data=", index, (void*)curr);
 
         if (curr->data == NULL) {
-            /* data == NULL -> print "NULL" */
             printf("NULL");
         } else {
-            /* data type specific callback */
+            /* user callback prints the payload */
             print_data(curr->data);
         }
 
@@ -352,4 +350,3 @@ void linked_list_debug_print(LinkedList list, void (*print_data)(void*)) {
 
     printf("NULL\n");
 }
-
