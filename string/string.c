@@ -121,29 +121,5 @@ void string_trim(string s) {
 }
 
 void string_split(const string s, const char* separators, size_t num_separators, string* splitted_tokens, size_t* num_tokens){
-    size_t str_len = string_len(s);
-    size_t tokens_count=0;
-
-    for (size_t i=1; i<str_len; i++){
-        int is_current_char_separator=0;
-        int is_previous_char_separator=0;
-        for(size_t j=0; j<num_separators; j++){
-            if(s[i]==separators[j]) is_current_char_separator = 1;
-            if(s[i-1]==separators[j]) is_previous_char_separator = 1;
-        }
-        if(!is_current_char_separator && is_previous_char_separator){
-            tokens_count++;
-        }
-    }
-
-    *num_tokens = tokens_count;
-    splitted_tokens = (char**) malloc(tokens_count * sizeof(char**));
-
-    for (size_t i=0; i<str_len-1; i++){
-        int is_current_char_separator=0;
-        int is_next_char_separator=0;
-        for(size_t j=0; j<num_separators; j++){
-            ...
-        }
-    }
+   
 }
