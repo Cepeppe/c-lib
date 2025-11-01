@@ -1,6 +1,6 @@
 #include <stdio.h>
-
+#include "linked_list_tests.h"
 int main(void) {
-    printf("ciao dal C!\n");
+    run_all_linked_list_tests();
     return 0;
 }

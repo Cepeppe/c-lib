@@ -78,7 +78,22 @@ void linked_list_push_back(LinkedList list, void* new_data);
 /* Remove last element*/
 void linked_list_remove_last(LinkedList list);
 
+/* Append new_data at the beginning of the list */
+void linked_list_push_front(LinkedList list, void* new_data);
+
+/* Remove first element*/
+void linked_list_remove_first(LinkedList list);
+
 /* Frees linked list memory */
 void linked_list_destroy(LinkedList list);
+
+/* Frees linked list memory */
+LinkedListNode* get_linked_list_at_index(LinkedList list, size_t index);
+
+/* Returns a new linked list reversed in-place*/
+LinkedList linked_list_reverse(LinkedList list);
+
+/* Debug print*/
+void linked_list_debug_print(LinkedList list, void (*print_data)(void*));
 
 #endif
