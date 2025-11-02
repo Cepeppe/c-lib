@@ -27,26 +27,24 @@
  *
  * Caller must free() the returned pointer.
  */
+
 char* raw_bytes_to_char_buffer(const void* data, size_t len) {
     if (data == NULL || len == 0) {
-        // Convention: return an empty string "" if no data.
-        char* empty = (char*)malloc(1 * sizeof(char));
-        if (empty) {
+        char* empty = (char*)malloc(1);
+        if (empty != NULL) {
             empty[0] = '\0';
         }
         return empty;
     }
 
-    char* out = (char*)malloc((len + 1) * sizeof(char));
-    if (!out) {
-        return NULL; // allocation failed
+    char* out = (char*)malloc(len + 1);
+    if (out == NULL) {
+        return NULL;
     }
 
-    // Copy raw bytes as-is into the char buffer
     memcpy(out, data, len);
-
-    // Add a trailing '\0' just so the buffer is always "string-safe-ish"
-    out[len] = '\0';
+    out[len] = '\0'; /* safety terminator */
 
     return out;
 }
+

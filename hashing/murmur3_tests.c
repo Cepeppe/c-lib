@@ -42,9 +42,9 @@ int test_murmur3(void) {
     TESTHASH(x64, 128, 123, "", "4cd9597081679d1abd92f8784bace33d");
 
     if(failed == 0)
-        printf("[OK] murmur3 creator library tests\n   Total tests: %i | Passed: %i | Failed: %i\n", passed + failed, passed, failed);
+        printf("[OK] murmur3 creator library tests\n   murmur3) total tests: %i | Passed: %i | Failed: %i\n", passed + failed, passed, failed);
     else 
-        printf("[TEST FAIL] murmur3 creator library tests failed\n   Total tests: %i | Passed: %i | Failed: %i\n", passed + failed, passed, failed);
+        printf("[TEST FAIL] murmur3 creator library tests failed\n   murmur3) total tests: %i | Passed: %i | Failed: %i\n", passed + failed, passed, failed);
     
     return failed > 0;
 }
