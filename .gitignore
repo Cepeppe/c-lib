@@ -1,3 +1,48 @@
-.vscode
-*.exe
+# --- VS Code workspace files (local editor settings, not project code) ---
+.vscode/
+
+# --- Build artifacts / compiled binaries ---
+*.exe        # Windows executables
+*.out        # Generic Unix executables (a.out etc.)
+*.obj        # MSVC object files
+*.o          # GCC/Clang object files
+*.a          # Static libraries (Unix)
+*.lib        # Static libraries (MSVC)
+*.dll        # Windows dynamic libraries
+*.so         # Linux shared libraries
+*.dylib      # macOS shared libraries
+
+# --- Debug / profiling / coverage files ---
+*.pdb        # MSVC debug symbol database
+*.ilk        # MSVC incremental linker file
+*.map        # Linker map files
+*.gcda       # GCC coverage data file
+*.gcno       # GCC coverage notes file
+*.gcov       # Generated coverage reports
+
+# --- Build directories (local build output, not source) ---
+build/
+Build/
+BUILD/
+build-debug/
+build-release/
+debug/
+release/
+.out/
+.build/
+
+# --- Logs / temp files ---
+*.log
+*.tmp
+*.temp
+
+# --- OS-specific junk files that should never be committed ---
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# --- Local personal files you don't want in version control ---
 info1
