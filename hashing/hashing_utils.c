@@ -48,3 +48,16 @@ char* raw_bytes_to_char_buffer(const void* data, size_t len) {
     return out;
 }
 
+
+void* clone_bytes(const void* src, size_t size) {
+    if (size == 0) return NULL;
+    void* dst = malloc(size);
+    if (dst == NULL) {
+        fprintf(stderr, "malloc failed in clone_bytes\n");
+        exit(FAILED_HASH_MAP_ALLOCATION);
+    }
+    memcpy(dst, src, size);
+    return dst;
+}
+
+

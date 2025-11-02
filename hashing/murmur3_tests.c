@@ -14,7 +14,7 @@ int test_murmur3(void) {
     printf("[TEST] murmur3 creator library tests...\n");
     int passed = 0, failed = 0;
 
-#define TESTHASH(arch, nbytes, seed, str, expected) {                   \
+    #define TESTHASH(arch, nbytes, seed, str, expected) {               \
         char *input = str;                                              \
         uint32_t hash[4];                                               \
         char buf[33];                                                   \

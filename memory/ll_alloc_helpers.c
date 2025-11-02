@@ -1,4 +1,5 @@
 #include "ll_alloc_helpers.h"
+#include "../hashmap/hashmap.h"
 
 void* ll_alloc_int(int value) {
     int* p = (int*) malloc(sizeof(int));
@@ -34,6 +35,16 @@ void* ll_alloc_char(char value){
     char* p = (char*) malloc(sizeof(char));
     if (p == NULL) {
         fprintf(stderr, "malloc failed in ll_alloc_char\n");
+        exit(MALLOC_FAILURE_EXIT_CODE);
+    }
+    *p = value;
+    return (void*) p;
+}
+
+void* ll_alloc_HashMapItem(HashMapItem value) {
+    HashMapItem* p = (HashMapItem*) malloc(sizeof(HashMapItem));
+    if (p == NULL) {
+        fprintf(stderr, "malloc failed in ll_alloc_HashMapItem\n");
         exit(MALLOC_FAILURE_EXIT_CODE);
     }
     *p = value;
