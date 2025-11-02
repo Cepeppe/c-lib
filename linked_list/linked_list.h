@@ -90,6 +90,9 @@ void linked_list_destroy(LinkedList list);
 /* Frees linked list memory */
 LinkedListNode* get_linked_list_at_index(LinkedList list, size_t index);
 
+/* Removes element at index (if present)*/
+int linked_list_remove_at_index(LinkedList list, size_t index);
+
 /* Returns a new linked list reversed in-place*/
 LinkedList linked_list_reverse(LinkedList list);
 

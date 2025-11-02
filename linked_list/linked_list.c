@@ -3,7 +3,7 @@
 LinkedList build_linked_list(void* data, LinkedList next){
     LinkedList list = (LinkedList) malloc(sizeof(LinkedListNode));
     if(list == NULL){
-        fprintf(stderr, "Failed malloc while trying to build new linked list");
+        fprintf(stderr, "Failed malloc while trying to build new linked list\n");
         exit(FAILED_LINKED_LIST_ALLOCATION);
     }
 
@@ -15,7 +15,7 @@ LinkedList build_linked_list(void* data, LinkedList next){
 LinkedList build_empty_linked_list(){
     LinkedList list = (LinkedList) malloc(sizeof(LinkedListNode));
     if(list == NULL){
-        fprintf(stderr, "Failed malloc while trying to build new empty linked list");
+        fprintf(stderr, "Failed malloc while trying to build new empty linked list\n");
         exit(FAILED_LINKED_LIST_ALLOCATION);
     }
     
@@ -26,7 +26,7 @@ LinkedList build_empty_linked_list(){
 
 int is_linked_list_empty(LinkedList list){
     if (list == NULL) {
-        fprintf(stderr, "You tried to check if a NULL linked list is empty");
+        fprintf(stderr, "You tried to check if a NULL linked list is empty\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     }
 
@@ -56,7 +56,7 @@ void free_linked_list_node(LinkedListNode* node){
 
 void* get_linked_list_head_data(LinkedList list){
     if (is_linked_list_null(list)){
-        fprintf(stderr, "You tried to access head data in a NULL linked list");
+        fprintf(stderr, "You tried to access head data in a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     }
 
@@ -66,7 +66,7 @@ void* get_linked_list_head_data(LinkedList list){
 
 LinkedList get_linked_list_tail(LinkedList list){
     if (is_linked_list_null(list)){
-        fprintf(stderr, "You tried to access a NULL linked list tail");
+        fprintf(stderr, "You tried to access a NULL linked list tail\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     }
     if(is_linked_list_empty(list)) 
@@ -78,7 +78,7 @@ size_t get_linked_list_size(LinkedList list){
     size_t size = 0;
 
     if (is_linked_list_null(list)){
-        fprintf(stderr, "You tried to calculate length on a NULL linked list");
+        fprintf(stderr, "You tried to calculate length on a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     } else if (is_linked_list_empty(list)){
         return size;
@@ -97,7 +97,7 @@ size_t get_linked_list_size(LinkedList list){
 
 size_t get_linked_list_size_recursive(LinkedList list){
     if (is_linked_list_null(list)){
-                        fprintf(stderr, "You tried to calculate length (recursive) on a NULL linked list");
+                        fprintf(stderr, "You tried to calculate length (recursive) on a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     }
 
@@ -108,7 +108,7 @@ size_t get_linked_list_size_recursive(LinkedList list){
 
 LinkedList get_linked_list_last_element(LinkedList list){
     if (is_linked_list_null(list)){
-        fprintf(stderr, "You requested last element from a NULL linked list");
+        fprintf(stderr, "You requested last element from a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     } else if (is_linked_list_empty(list)){
         return list;
@@ -125,7 +125,7 @@ LinkedList get_linked_list_last_element(LinkedList list){
 
 void linked_list_push_back(LinkedList list, void* new_data){
     if (is_linked_list_null(list)){
-        fprintf(stderr, "You tried to push back an element on a NULL linked list");
+        fprintf(stderr, "You tried to push back an element on a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     } else if (is_linked_list_empty(list)){
         list->data=new_data;
@@ -148,12 +148,13 @@ void linked_list_push_back(LinkedList list, void* new_data){
 
 void linked_list_remove_last(LinkedList list){
     if (is_linked_list_null(list)){
-        fprintf(stderr, "You tried to remove last element from a NULL linked list");
+        fprintf(stderr, "You tried to remove last element from a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     }
     else if (is_linked_list_empty(list))
         return;
     else if (list->data != NULL && list->next==NULL){
+        free(list->data);
         list->data = NULL;
         return;
     }
@@ -170,7 +171,7 @@ void linked_list_remove_last(LinkedList list){
 
 void linked_list_push_front(LinkedList list, void* new_data) {
     if (is_linked_list_null(list)) {
-        fprintf(stderr, "You tried to push front an element on a NULL linked list");
+        fprintf(stderr, "You tried to push front an element on a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     }
 
@@ -182,7 +183,7 @@ void linked_list_push_front(LinkedList list, void* new_data) {
 
     LinkedListNode* shifted_node = (LinkedListNode*) malloc(sizeof(LinkedListNode));
     if (shifted_node == NULL) {
-        fprintf(stderr, "Failed malloc while trying to push_front on linked list");
+        fprintf(stderr, "Failed malloc while trying to push_front on linked list\n");
         exit(FAILED_LINKED_LIST_ALLOCATION);
     }
 
@@ -199,7 +200,7 @@ void linked_list_push_front(LinkedList list, void* new_data) {
 
 void linked_list_remove_first(LinkedList list) {
     if (is_linked_list_null(list)) {
-        fprintf(stderr, "You tried to remove first element from a NULL linked list");
+        fprintf(stderr, "You tried to remove first element from a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     } else if (is_linked_list_empty(list)) {
         return;
@@ -232,8 +233,6 @@ void linked_list_remove_first(LinkedList list) {
     /* Free the old second node (NOT its data) */
     free(second);
 }
-
-
 
 void linked_list_destroy(LinkedList list) {
     if (is_linked_list_null(list)) {
@@ -280,6 +279,67 @@ LinkedListNode* get_linked_list_at_index(LinkedList list, size_t index) {
     /* index out of range */
     return NULL;
 }
+
+/*
+ * Remove element at 0-based `index` from the linked list.
+ *
+ * Returns:
+ *   1 -> element was removed
+ *   0 -> list was logically empty OR index out of bounds
+ *
+ *  If list is NULL exit().
+ *  If index == 0, we delegate to linked_list_remove_first(list), which:
+ *      turns a 1-element list into an "empty head" (data=NULL,next=NULL), or
+ *      copies the second node into the head and frees that second node.
+ *   This avoids changing the caller's head pointer.
+ *  For index > 0, unlink and free the target node:
+ *      prev -> victim -> next    becomes    prev -> next
+ *   We free both victim->data and victim itself via free_linked_list_node().
+ */
+int linked_list_remove_at_index(LinkedList list, size_t index) {
+    if (is_linked_list_null(list)) {
+        fprintf(stderr,
+                "You tried to remove an element by index from a NULL linked list\n");
+        exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
+    }
+
+    if (is_linked_list_empty(list)) {
+        fprintf(stderr,
+                "Tried to remove an element by index from an empty linked list\n");
+        fprintf(stderr,
+                "This is a no-op. No actions performed, list is still empty\n");
+        return 0;
+    }
+
+    if (index == 0) {
+        linked_list_remove_first(list);
+        return 1;
+    }
+
+    /* Walk to node at (index-1). */
+    LinkedList prev = list;
+    size_t pos = 0;
+    while (pos < index - 1 && prev != NULL) {
+        prev = prev->next;
+        pos++;
+    }
+
+    /* Out of bounds: we didn't reach (index-1), or there's no node at `index`. */
+    if (prev == NULL || prev->next == NULL) {
+        fprintf(stderr,
+                "Tried to remove index %zu but it's out of bounds (stopped at %zu)\n",
+                index, pos);
+        return 0;
+    }
+
+    /* Unlink and free the victim node. */
+    LinkedListNode* victim = prev->next;
+    prev->next = victim->next;
+    free_linked_list_node(victim);
+
+    return 1;
+}
+
 
 /* Reverse the list in-place (iterative).
    Returns the new head (caller MUST assign the return value).
