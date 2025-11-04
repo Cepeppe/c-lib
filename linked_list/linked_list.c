@@ -1,14 +1,14 @@
 #include "linked_list.h"
 
-LinkedList build_linked_list(void* data, LinkedList next){
-    LinkedList list = (LinkedList) malloc(sizeof(LinkedListNode));
-    if(list == NULL){
+
+LinkedList build_linked_list_copy(const void* data, size_t size, LinkedList next) {
+    LinkedList list = malloc(sizeof *list);
+    if (list == NULL) {
         fprintf(stderr, "Failed malloc while trying to build new linked list\n");
         exit(FAILED_LINKED_LIST_ALLOCATION);
     }
-
-    list->data=data;
-    list->next=next;
+    list->data = clone_bytes(data, size);
+    list->next = next;
     return list;
 }
 
@@ -123,11 +123,13 @@ LinkedList get_linked_list_last_element(LinkedList list){
     return temp->next;
 }
 
-void linked_list_push_back(LinkedList list, void* new_data){
+void linked_list_push_back(LinkedList list, void* data){
     if (is_linked_list_null(list)){
         fprintf(stderr, "You tried to push back an element on a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     } else if (is_linked_list_empty(list)){
+        void* new_data = (void*) malloc(sizeof(data));
+        memcpy(new_data, data, sizeof(data));
         list->data=new_data;
         return;
     }
@@ -135,10 +137,14 @@ void linked_list_push_back(LinkedList list, void* new_data){
     LinkedList last_element = get_linked_list_last_element(list);
 
     if(is_linked_list_empty(last_element)){
+        void* new_data = (void*) malloc(sizeof(data));
+        memcpy(new_data, data, sizeof(data));
         last_element->data=new_data;
         return;
     } else {
         LinkedList new_element = build_empty_linked_list();
+        void* new_data = (void*) malloc(sizeof(data));
+        memcpy(new_data, data, sizeof(data));
         new_element->data = new_data;
         last_element->next = new_element;
     }
@@ -169,13 +175,15 @@ void linked_list_remove_last(LinkedList list){
     temp->next = NULL;
 }
 
-void linked_list_push_front(LinkedList list, void* new_data) {
+void linked_list_push_front(LinkedList list, void* data) {
     if (is_linked_list_null(list)) {
         fprintf(stderr, "You tried to push front an element on a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     }
 
     if (is_linked_list_empty(list)) {
+        void* new_data = (void*) malloc(sizeof(data));
+        memcpy(new_data, data, sizeof(data));
         list->data = new_data;
         return;
     }
@@ -192,6 +200,8 @@ void linked_list_push_front(LinkedList list, void* new_data) {
     shifted_node->next = list->next;
 
     /* Overwrite head new data and link with new head */
+    void* new_data = (void*) malloc(sizeof(data));
+    memcpy(new_data, data, sizeof(data));
     list->data = new_data;
     list->next = shifted_node;
 

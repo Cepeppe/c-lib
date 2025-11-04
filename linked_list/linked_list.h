@@ -14,14 +14,24 @@
     A LinkedList == NULL IS NOT AN EMPTY LINKED LIST
     It is the PROGRAMMER RESPONSABILITY TO INITIALIZE THE LINKED LIST
 
-    IMPORTANT:
+
+                        Linked list IS OWNER OF DATA
+
     Every node->data MUST point to heap memory obtained via malloc/calloc/realloc.
     The list will free node->data when elements are removed or destroyed.
     Do NOT store addresses of stack variables or globals in node->data.
+
+    When inserting data into the list (as a pointer to void), the pointer value is copied,
+    so you can re-assign and keep working with the pointer, but mind not to free it 
+    or dangling pointer problem will arise.
+
+    COMMON BEST PRACTICE: When inserting data into the list as a pointer,
+    it is suggested not to touch again that memory address 
+    (so re-assign your pointer before calling free )
   
 */
 
-/* Singly linked list node */
+/* linked list node */
 typedef struct LinkedListNode{
     void* data;                    /* user data pointer */
     struct LinkedListNode * next;  /* next node, or NULL */
@@ -44,7 +54,6 @@ int is_linked_list_null(LinkedList list);
 
 /* 
     Free data field for a single LinkedListNode
-    IMPORTANT: save and reconnect element before and after to avoid breaking the list 
 */
 void free_linked_list_node_data(LinkedListNode* node);
 
@@ -73,13 +82,13 @@ size_t get_linked_list_size_recursive(LinkedList list);
 LinkedList get_linked_list_last_element(LinkedList list);
 
 /* Append new_data at the end of the list */
-void linked_list_push_back(LinkedList list, void* new_data);
+void linked_list_push_back(LinkedList list, void* data);
 
 /* Remove last element*/
 void linked_list_remove_last(LinkedList list);
 
-/* Append new_data at the beginning of the list */
-void linked_list_push_front(LinkedList list, void* new_data);
+/* Append data at the beginning of the list */
+void linked_list_push_front(LinkedList list, void* data);
 
 /* Remove first element*/
 void linked_list_remove_first(LinkedList list);

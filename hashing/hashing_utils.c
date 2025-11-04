@@ -54,7 +54,7 @@ void* clone_bytes(const void* src, size_t size) {
     void* dst = malloc(size);
     if (dst == NULL) {
         fprintf(stderr, "malloc failed in clone_bytes\n");
-        exit(FAILED_HASH_MAP_ALLOCATION);
+        exit(-1);
     }
     memcpy(dst, src, size);
     return dst;

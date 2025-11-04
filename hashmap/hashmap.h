@@ -34,14 +34,15 @@ typedef struct HashMap {
     LinkedList buckets[HASH_MAP_BUCKET_NUM];
 } HashMap;
 
+/* clone arbitrary bytes into a new heap buffer that we own */
+static void* clone_bytes(const void* src, size_t size);
+
+/* builds empty hash map*/
 HashMap* build_hash_map(void);
 
 /*
  * Deep-free:
- * - for each node in each bucket:
- *   - free(item->key), free(item->data), free(item)
- *   - set node->data = NULL
- * - then call linked_list_destroy(bucket) to free the nodes themselves
+ * - for each node in each bucket calls linked_list_destroy(bucket) to free the nodes themselves
  * - finally free(hash_map)
  */
 void hash_map_destroy(HashMap* hash_map);
@@ -56,12 +57,47 @@ uint64_t generate_hash(const void* key, size_t key_size);
  * Returns 1 if key already existed (so we replaced its value),
  * 0 if this is a new key.
  *
- * NOTE: This function CLONES both key and data into heap memory
- *       (using malloc+memcpy).
+ * NOTE: CLONES both key and data into heap memory (using malloc+memcpy).
  *       The map becomes owner and will free them in hash_map_destroy().
  */
 int hash_map_put(HashMap* hash_map,
                  const void* key,  size_t key_size,
                  const void* data, size_t data_size);
+
+/*
+ * Remove the entry with the given key (if present).
+ *
+ * Returns: 
+ *  1 if key was found and removed
+ *  0 if key not found
+ *
+ */
+int hash_map_remove(HashMap* hash_map,
+                    const void* key,
+                    size_t key_size);
+
+/*
+ * Get by key
+ *
+ * Returns: 
+ *  HashMapItem pointer associated to key (if exists)
+ *  NULL otherwise
+ * 
+ * NOTE: it is returned a pointer to the object inside the hashmap,
+ * return value is const so IT SHOULD NOT BE MODIFIED.
+ * If you access in write mode on this object undefined behavious will arise.
+ * 
+ * IF YOU REALLY NEED TO ACCESS A HASHMAP STORED OBJECT IN WRITE MODE, 
+ * CONSIDER USING APPROPRIATE EXPOSED APIs (e.g. PUT METHOD hash_map_put)
+ * 
+ * If you really want to use this method to modify in-place, make sure to deeply 
+ * know the offered hash-map and linked list implementation in order to make sure
+ * you are not breaking some invariants
+ *
+ */
+const HashMapItem* hash_map_get(
+                    HashMap* hash_map,
+                    const void* key, 
+                    size_t key_size);
 
 #endif

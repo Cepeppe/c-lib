@@ -20,7 +20,7 @@
 #include <stddef.h>  /* size_t */
 #include <stdlib.h>  /* malloc */
 #include <string.h>  /* memcpy */
-#include "hashmap.h";
+#include <stdio.h>   /* stderr */
 
 char* raw_bytes_to_char_buffer(const void* data, size_t len);
 void* clone_bytes(const void* src, size_t size);
