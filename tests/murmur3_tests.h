@@ -5,7 +5,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "murmur3.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include "../hashing/murmur3.h"
 int test_murmur3(void);
 
 #endif

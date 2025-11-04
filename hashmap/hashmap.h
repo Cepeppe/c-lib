@@ -34,6 +34,9 @@ typedef struct HashMap {
     LinkedList buckets[HASH_MAP_BUCKET_NUM];
 } HashMap;
 
+/* deep free hash_map item */
+static void hash_map_free_item(void* p);
+
 /* clone arbitrary bytes into a new heap buffer that we own */
 static void* clone_bytes(const void* src, size_t size);
 
