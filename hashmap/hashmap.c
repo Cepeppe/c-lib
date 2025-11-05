@@ -107,6 +107,12 @@ void hash_map_destroy(HashMap* hash_map,
         while (bucket_head != NULL) {
             LinkedListNode* node = bucket_head;
             bucket_head = bucket_head->next;
+            
+            /* If this is an empty sentinel (no payload), just free the node. */
+            if (node->data == NULL) {
+                free(node);
+                continue;
+            }
 
             /* Detach to satisfy the “standalone node” precondition */
             node->next = NULL;
@@ -285,7 +291,7 @@ int hash_map_remove(HashMap* hash_map,
                 second->next = NULL;
 
                 /* Free only the node structure (payload already transferred) */
-                linked_list_destroy(second);
+                free(second);
                 return 1;
             }
         }

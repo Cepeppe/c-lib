@@ -2,8 +2,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "hashing_utils.h"
 #include "hashing_utils_tests.h"
 
 static void debug_print_hex(const char* buf, size_t len) {

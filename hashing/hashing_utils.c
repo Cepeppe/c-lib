@@ -49,15 +49,4 @@ char* raw_bytes_to_char_buffer(const void* data, size_t len) {
 }
 
 
-void* clone_bytes(const void* src, size_t size) {
-    if (size == 0) return NULL;
-    void* dst = malloc(size);
-    if (dst == NULL) {
-        fprintf(stderr, "malloc failed in clone_bytes\n");
-        exit(-1);
-    }
-    memcpy(dst, src, size);
-    return dst;
-}
-
 

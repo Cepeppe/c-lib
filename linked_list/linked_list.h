@@ -17,6 +17,8 @@
         Every node->data MUST point to heap memory obtained via malloc/calloc/realloc.
     It is the PROGRAMMER RESPONSABILITY TO INITIALIZE AND DESTROY THE LINKED LIST
 
+    A LINKED LIST HEAD IS ALWAYS THE SAME
+    
     Linked list IS OWNER OF DATA
     -When inserting data into linked list, it becomes
         owner of the data and frees it when removed 

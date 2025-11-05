@@ -23,6 +23,5 @@
 #include <stdio.h>   /* stderr */
 
 char* raw_bytes_to_char_buffer(const void* data, size_t len);
-void* clone_bytes(const void* src, size_t size);
 
 #endif /* HASHING_UTILS_H */

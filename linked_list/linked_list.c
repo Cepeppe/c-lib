@@ -357,7 +357,7 @@ void linked_list_remove_hashmap_node_with(
         fprintf(stderr, "You are trying to remove a NULL node\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     } else if (is_linked_list_empty(node)){
-        fprintf(stderr, "You are trying to an empty linked list node, this is a no-op\n");
+        fprintf(stderr, "You are trying to remove an empty linked list node, this is a no-op\n");
         return;
     }
 

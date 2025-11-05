@@ -1,10 +1,15 @@
 #ifndef HASHMAP_TESTS_H
 #define HASHMAP_TESTS_H
 
-/* Runs the full HashMap test suite.
- * Prints a per-suite summary (passed/failed).
- * Returns 0 if all tests passed, non-zero otherwise.
- */
-int run_hashmap_tests(void);
+#include "../hashmap/hashmap.h"
+#include "../linked_list/linked_list.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+/* Entry point for HashMap tests. Prints a summary and does not exit. */
+void run_all_hashmap_tests(void);
 
 #endif /* HASHMAP_TESTS_H */
+

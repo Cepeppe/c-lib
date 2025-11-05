@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "hashing_utils.h"
+#include "../hashing/hashing_utils.h"
 
 /*
  * hashing_utils_tests.h
