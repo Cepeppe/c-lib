@@ -41,6 +41,8 @@ void* ll_alloc_char(char value){
     return (void*) p;
 }
 
+//ll_alloc_HashMapItem: allocates struct on heap and peforms shallow copy of fields
+//DOES NOT PERFORM KEY DEEP COPY
 void* ll_alloc_HashMapItem(HashMapItem value) {
     HashMapItem* p = (HashMapItem*) malloc(sizeof(HashMapItem));
     if (p == NULL) {

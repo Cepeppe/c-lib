@@ -32,10 +32,10 @@ int is_linked_list_null(LinkedList list){
 }
 
 /* Free data field for a single LinkedListNode */
-void free_linked_list_node_data(LinkedListNode* node, void (*deep_deallocate_node_data)(LinkedListNode* node)){
+void free_linked_list_node_data(LinkedListNode* node, void (*deep_deallocate_node_data)(void* data)){
     if (node == NULL) return;
     if (node->data != NULL) {
-        deep_deallocate_node_data(node);
+        deep_deallocate_node_data(node->data);
         node->data = NULL;  /* avoid accidental double frees */
     }
 }
@@ -143,14 +143,14 @@ void linked_list_remove_last(LinkedList list){
 }
 
 // Linked list has data ownership, so it will deep free last element memory space using this function
-void linked_list_remove_last_with(LinkedList list, void (*deep_deallocate_node_data)(LinkedListNode* node)){
+void linked_list_remove_last_with(LinkedList list, void (*deep_deallocate_node_data)(void* data)){
     if (is_linked_list_null(list)){
         fprintf(stderr, "You tried to remove last element from a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
     } else if (is_linked_list_empty(list)){
         return;
     } else if (list->next==NULL){
-        deep_deallocate_node_data(list);
+        deep_deallocate_node_data(list->data);
         list->data=NULL;
         return;
     }
@@ -163,7 +163,7 @@ void linked_list_remove_last_with(LinkedList list, void (*deep_deallocate_node_d
 
     LinkedListNode* before_last = list;
     LinkedListNode* last = list->next;
-    deep_deallocate_node_data(last);
+    deep_deallocate_node_data(last->data);
     free(last);
     before_last->next=NULL;
 }
@@ -198,7 +198,7 @@ void linked_list_push_front(LinkedList list, void* data) {
 }
 
 // Removes first node and performs deep free of data
-void linked_list_remove_first_with(LinkedList list, void (*deep_deallocate_node_data)(LinkedListNode* node)) {
+void linked_list_remove_first_with(LinkedList list, void (*deep_deallocate_node_data)(void* data)) {
     if (is_linked_list_null(list)) {
         fprintf(stderr, "You tried to remove first element from a NULL linked list\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
@@ -208,8 +208,8 @@ void linked_list_remove_first_with(LinkedList list, void (*deep_deallocate_node_
 
     // Single-element list: just deallocate data and turn into empty list
     if (list->next == NULL) {
-        if (list->data != NULL) {
-            deep_deallocate_node_data(list);
+        if (list->data != NULL && deep_deallocate_node_data!=NULL) {
+            deep_deallocate_node_data(list->data);
         }
         list->data = NULL;
         return;
@@ -222,7 +222,7 @@ void linked_list_remove_first_with(LinkedList list, void (*deep_deallocate_node_
 
     // The current head's data is being removed, so free it
     if (list->data != NULL) {
-        deep_deallocate_node_data(list);
+        deep_deallocate_node_data(list->data);
     }
 
     // Move second's data/next into head
@@ -281,7 +281,7 @@ void linked_list_destroy(LinkedList list) {
     return;
 }
 
-void linked_list_destroy_with(LinkedList list, void (*deep_deallocate_node_data)(LinkedListNode* node)) {
+void linked_list_destroy_with(LinkedList list, void (*deep_deallocate_node_data)(void* data)) {
     if (is_linked_list_null(list)) {
         fprintf(stderr, "You are trying to destroy a NULL linked list, this is a no-op\n");
         return;
@@ -290,7 +290,7 @@ void linked_list_destroy_with(LinkedList list, void (*deep_deallocate_node_data)
     LinkedList current = list;
     while (current != NULL) {
         LinkedList next = current->next;
-        deep_deallocate_node_data(current);
+        deep_deallocate_node_data(current->data);
         free(current);
         current = next;
     }
@@ -316,7 +316,7 @@ void linked_list_remove_next_node(LinkedListNode* node){
 }
 
 //Removes node after the chosen one and performs deep free of memory
-void linked_list_remove_next_node_with(LinkedListNode* node, void (*deep_deallocate_node_data)(LinkedListNode* node) ){
+void linked_list_remove_next_node_with(LinkedListNode* node, void (*deep_deallocate_node_data)(void* data)){
     if (is_linked_list_null(node)) {
         fprintf(stderr, "You are trying to remove next node for a NULL node\n");
         exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
@@ -328,10 +328,46 @@ void linked_list_remove_next_node_with(LinkedListNode* node, void (*deep_dealloc
     node->next=following_one->next;
 
     if(following_one->data!=NULL){
-        deep_deallocate_node_data(following_one);
+        deep_deallocate_node_data(following_one->data);
     }
     free(following_one);
         
+    return;
+}
+
+/*
+ * Free a standalone LinkedListNode containing a HashMapItem.
+ * PRE: the node is already detached from any list (no prev->next pointing to it).
+ * Effect: frees HashMapItem->data via deep_deallocate_hashmap_item_data,
+ *         then frees the HashMapItem itself via deep_deallocate_hashmap_item,
+ *         then frees the node.
+ * 
+ * NB: DOES NOT RECONNECT PREVIOUS AND FOLLOWING NODES
+ */
+void linked_list_remove_hashmap_node_with(
+    //Pointer to linked list node
+    LinkedListNode* node,
+    //Function pointer to hash map item deallocator function (frees list->data, which is a HashMapItem)
+    void (*deep_deallocate_hashmap_item)(void* data, void (*deep_deallocate_hashmap_item_data)(void*)),
+    //Function pointer to hashmap item data deallocator function (frees list->data->data or, in other terms, HashMapItem->data)
+    // Can be null if HashMapItem->data is a primitive type and was not allocated via malloc
+    void (*deep_deallocate_hashmap_item_data)(void* data)
+){
+    if (is_linked_list_null(node)) {
+        fprintf(stderr, "You are trying to remove a NULL node\n");
+        exit(ATTEMPTED_ACCESS_TO_NULL_LINKED_LIST);
+    } else if (is_linked_list_empty(node)){
+        fprintf(stderr, "You are trying to an empty linked list node, this is a no-op\n");
+        return;
+    }
+
+    node->next = NULL;
+    if (node->data!=NULL) {
+        deep_deallocate_hashmap_item(node->data, deep_deallocate_hashmap_item_data);
+    }
+
+    free(node);
+
     return;
 }
 
