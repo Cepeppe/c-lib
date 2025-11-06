@@ -1,0 +1,35 @@
+    5                4
+  3   6                9
+
+
+  [3, 5, 6]         [4, 9]
+
+
+BST_Node{
+    Node right;
+    Node left;
+    int data;
+}
+
+function preorderTraversal(BST tree){
+
+    if (tree==NULL)
+        return []
+
+    return 
+        (tree.left ? preorderTraversal(tree.left) : []) + 
+        [ tree.data == NULL ? tree.data : None ] + 
+        (tree.right ? preorderTraversal(tree.right) : [])
+
+}'
+
+         5
+       2    8
+      1 3  6
+
+                        preorderTraversal(1)
+                            [1, 2, 3]+[5]+[6, 8]=[1, 2, 3, 5, 6, 8]
+       preorderTraversal(2)                            preorderTraversal(3)
+           [1]+[2]+[3]                                      [6]+[8]+[]
+preorderTraversal(4)   preorderTraversal(5)   preorderTraversal(6)         NULL
+       []+[1]+[]            []+[3]+[]              []+[6]+[]   

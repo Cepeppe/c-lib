@@ -12,7 +12,7 @@
  *   after insertion. The tree frees them on node deletion or destroy.
  *
  * - No copying: the tree never deep-copies bytes. Internal operations move
- *   payloads by swapping `data`/`data_size` between nodes when needed
+ *   payloads by swapping data/data_size between nodes when needed
  *   (e.g., delete with two children, delete root with one child).
  *
  * - Root sentinel: an empty BST is a single root node with data==NULL and no children.
@@ -50,7 +50,7 @@ typedef BinarySearchTreeNode* BinarySearchTree;
 
 #ifdef BST_USE_ASCII
   #define BST_VBAR   "|   "
-  #define BST_JR     "`-- "   /* right branch marker */
+  #define BST_JR     "-- "   /* right branch marker */
   #define BST_JL     "+-- "   /* left  branch marker */
 #else
   #define BST_VBAR   "│   "
@@ -83,7 +83,7 @@ BinarySearchTreeNode* bin_search_tree_alloc_node(void);
 int is_bin_search_tree_null(BinarySearchTree tree);
 
 /**
- * @brief Lookup in the BST; find the node holding `data` or return NULL if absent.
+ * @brief Lookup in the BST; find the node holding data or return NULL if absent.
  * @param tree     Non-NULL BST root (must be allocated beforehand).
  * @param data     Key/payload to search (non-NULL, read-only).
  * @param compare  Comparator used for ordering (<0 left, 0 equal, >0 right).
@@ -97,15 +97,15 @@ BinarySearchTreeNode* bin_search_tree_contains(
 );
 
 /**
- * @brief Insert a value into the BST, transferring ownership of `data` to the tree.
- *        No bytes are copied. The caller must not free or use `data` after insertion.
+ * @brief Insert a value into the BST, transferring ownership of data to the tree.
+ *        No bytes are copied. The caller must not free or use data after insertion.
  *        Requires a pre-allocated empty root (bin_search_tree_alloc_node()).
  *        Duplicates are not inserted (returns the existing node).
  * @param tree      Non-NULL BST root (may be empty sentinel: data==NULL, no children).
  * @param data      Heap-allocated payload pointer to take ownership of (non-NULL).
- * @param data_size Size of `data` in bytes (>0).
+ * @param data_size Size of data in bytes (>0).
  * @param compare   Comparator used for ordering.
- * @return Pointer to the node holding `data` (newly created or existing).
+ * @return Pointer to the node holding data (newly created or existing).
  * @complexity O(h) time (h = tree height); recursive.
  */
 BinarySearchTreeNode* bin_search_tree_insert_node(
@@ -166,7 +166,7 @@ BinarySearchTreeNode* bin_search_tree_find_max(BinarySearchTree tree);
 
 /**
  * @brief Recursively destroy the entire BST (post-order).
- *        If provided, calls `deep_free(node->data)` before freeing each node;
+ *        If provided, calls deep_free(node->data) before freeing each node;
  *        otherwise payload is freed with plain free().
  * @param tree       Root handle (may be NULL; no-op with warning in impl).
  * @param deep_free  Optional payload free-callback (can be NULL).

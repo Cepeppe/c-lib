@@ -92,8 +92,8 @@ BinarySearchTreeNode* bin_search_tree_contains(
 
 /* ==================================== insert ==================================== */
 /**
- * @brief Insert a value into the BST, transferring ownership of `data` to the tree.
- *        No bytes are copied. The caller must not free or use `data` after insertion.
+ * @brief Insert a value into the BST, transferring ownership of data to the tree.
+ *        No bytes are copied. The caller must not free or use data after insertion.
  *        Requires a pre-allocated empty root (bin_search_tree_alloc_node()).
  *        Duplicates are not inserted (returns the existing node).
  * @param tree Non-NULL BST root (may be empty sentinel).
@@ -135,7 +135,7 @@ BinarySearchTreeNode* bin_search_tree_insert_node(
     }
 
     int cmp = compare(data, tree->data);
-    if (cmp == 0) return tree; // already contained: caller must free his `data` to avoid leak
+    if (cmp == 0) return tree; // already contained: caller must free his data to avoid leak
 
     if (cmp < 0){
         if (tree->left == NULL){ // insert here
@@ -160,7 +160,7 @@ BinarySearchTreeNode* bin_search_tree_insert_node(
 
 /* ==================================== delete ==================================== */
 /*
-   Deletes node containing `data` (if present).
+   Deletes node containing data (if present).
    Preserves the same root pointer (even when deleting the root).
 
    Ownership notes:

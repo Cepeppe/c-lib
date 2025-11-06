@@ -11,10 +11,10 @@
  *   ALWAYS be freed by the map (see hash_map_free_item_with()).
  *
  * - Data ownership:
- *     * if deep_deallocate_hashmap_item_data != NULL → ownership of `data`
+ *     * if deep_deallocate_hashmap_item_data != NULL → ownership of data
  *       is TRANSFERRED to the map, which will free it via that callback.
  *     * if deep_deallocate_hashmap_item_data == NULL → the map does NOT
- *       own `data` and will NOT free it.
+ *       own data and will NOT free it.
  *
  * - Thread-safety: NOT thread-safe.
  * ============================================================================
@@ -22,7 +22,7 @@
 
 /*
  * 64-bit hash from MurmurHash3_x64_128 (lower 64 bits).
- * Note: MurmurHash3_x64_128 length parameter is `int`, hence the INT_MAX guard.
+ * Note: MurmurHash3_x64_128 length parameter is int, hence the INT_MAX guard.
  */
 uint64_t generate_hash(const void* key, size_t key_size) {
 
@@ -40,16 +40,16 @@ uint64_t generate_hash(const void* key, size_t key_size) {
 }
 
 /*
- * Deep-free routine for a LinkedList payload that is a `HashMapItem*` (i.e., node->data).
+ * Deep-free routine for a LinkedList payload that is a HashMapItem* (i.e., node->data).
  *
  * Compatible with linked_list_remove_hashmap_node_with(...), which passes:
- *   - `data` as the HashMapItem*,
- *   - `deep_deallocate_hashmap_item_data` as the optional deallocator for item->data.
+ *   - data as the HashMapItem*,
+ *   - deep_deallocate_hashmap_item_data as the optional deallocator for item->data.
  *
  * Frees, in order:
  *   1) item->key            (always heap-allocated by the map),
  *   2) item->data           (ONLY if a data-deallocator is provided),
- *   3) the `item` struct itself.
+ *   3) the item struct itself.
  */
 static void hash_map_free_item_with(void* data,
                                     void (*deep_deallocate_hashmap_item_data)(void* node_data)) {
@@ -86,8 +86,8 @@ HashMap* build_hash_map(void) {
 
 /*
  * Destroys the entire HashMap.
- * - `deep_deallocate_hashmap_item_data` deallocates HashMapItem->data (type-specific).
- *   It can be NULL when `data` is not dynamically allocated / not owned by the map.
+ * - deep_deallocate_hashmap_item_data deallocates HashMapItem->data (type-specific).
+ *   It can be NULL when data is not dynamically allocated / not owned by the map.
  *
  * Implementation note:
  * We detach each node (set node->next = NULL) before handing it to
@@ -138,8 +138,8 @@ void hash_map_destroy(HashMap* hash_map,
  *
  * Ownership rules recap:
  *   - The key is ALWAYS deep-copied here and thus owned/freed by the map.
- *   - `data` ownership is transferred to the map ONLY if
- *     `deep_deallocate_hashmap_item_data != NULL`; otherwise the map will not free it.
+ *   - data ownership is transferred to the map ONLY if
+ *     deep_deallocate_hashmap_item_data != NULL; otherwise the map will not free it.
  */
 int hash_map_put(HashMap* hash_map,
                  const void* key,
@@ -309,7 +309,7 @@ int hash_map_remove(HashMap* hash_map,
             item->key_size == key_size &&
             memcmp(item->key, key, key_size) == 0)
         {
-            /* Stitch neighbors, then free the standalone `curr` node */
+            /* Stitch neighbors, then free the standalone curr node */
             prev->next = curr->next;
             linked_list_remove_hashmap_node_with(
                 curr,

@@ -22,7 +22,7 @@
  * - The content may include '\0' in the middle. So treating this as a
  *   "regular C string" (printf("%s"), strlen(), etc.) will likely NOT
  *   reflect the full length.
- * - You MUST remember the original length `len` externally if you want
+ * - You MUST remember the original length len externally if you want
  *   to use the entire buffer.
  *
  * Caller must free() the returned pointer.
