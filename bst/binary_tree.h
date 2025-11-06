@@ -42,6 +42,22 @@ typedef struct BinarySearchTreeNode {
 /** Root handle for the BST. */
 typedef BinarySearchTreeNode* BinarySearchTree;
 
+
+/* ASCII fallback by default on Windows; define BST_FORCE_UTF8 to keep box-drawing */
+#if defined(_WIN32) && !defined(BST_FORCE_UTF8)
+  #define BST_USE_ASCII 1
+#endif
+
+#ifdef BST_USE_ASCII
+  #define BST_VBAR   "|   "
+  #define BST_JR     "`-- "   /* right branch marker */
+  #define BST_JL     "+-- "   /* left  branch marker */
+#else
+  #define BST_VBAR   "│   "
+  #define BST_JR     "└── "
+  #define BST_JL     "┌── "
+#endif
+
 /** Comparator: return <0, 0, >0 for (a < b), (a == b), (a > b). */
 typedef int (*bst_compare_fn)(const void *a, const void *b);
 

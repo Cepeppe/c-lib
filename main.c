@@ -4,9 +4,11 @@
 #include "tests/hashing_utils_tests.h"
 #include "tests/linked_list_tests.h"
 #include "tests/hashmap_tests.h"
+#include "tests/bst_tests.h"
 
 int run_tests(){
-    
+    run_all_bst_tests();
+    return;
     run_all_linked_list_tests();
     run_all_hashmap_tests();
     test_murmur3();
@@ -14,4 +16,5 @@ int run_tests(){
 
 int main(void) {
     run_tests();
+    return 0;
 }

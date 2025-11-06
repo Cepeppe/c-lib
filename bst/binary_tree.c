@@ -500,22 +500,21 @@ static void bst_print_node_line(BinarySearchTreeNode* n, void (*print_data)(cons
 }
 
 // recursive sideways printer (right on top, left below) with ASCII branches
-static void bst_print_rec(BinarySearchTreeNode* n, const char* prefix, int is_right, void (*print_data)(const void*, size_t)){
+static void bst_print_rec(BinarySearchTreeNode* n, const char* prefix, int is_right,
+                          void (*print_data)(const void*, size_t)) {
     if (!n) return;
 
     char next_prefix_right[512];
     char next_prefix_left[512];
-    // keep vertical guidelines for the left branch of upper nodes
-    snprintf(next_prefix_right, sizeof(next_prefix_right), "%s%s", prefix, (is_right ? "    " : "│   "));
-    snprintf(next_prefix_left,  sizeof(next_prefix_left),  "%s%s", prefix, (is_right ? "    " : "│   "));
 
-    // print right subtree first (appears on top)
+    snprintf(next_prefix_right, sizeof(next_prefix_right), "%s%s", prefix, (is_right ? "    " : BST_VBAR));
+    snprintf(next_prefix_left,  sizeof(next_prefix_left),  "%s%s", prefix, (is_right ? "    " : BST_VBAR));
+
     if (n->right) bst_print_rec(n->right, next_prefix_right, 1, print_data);
 
-    // current node line with branch
-    printf("%s%s", prefix, (is_right ? "└── " : "┌── "));
+    printf("%s%s", prefix, (is_right ? BST_JR : BST_JL));
     bst_print_node_line(n, print_data);
 
-    // left subtree
-    if (n->left)  bst_print_rec(n->left, next_prefix_left, 0, print_data);
+    if (n->left)  bst_print_rec(n->left,  next_prefix_left,  0, print_data);
 }
+
