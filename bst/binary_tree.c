@@ -85,8 +85,7 @@ BinarySearchTreeNode* bin_search_tree_contains(
 
     int cmp = compare(data, tree->data);
     if (cmp == 0) return tree;
-    if (cmp < 0)
-        return (tree->left  ? bin_search_tree_contains(tree->left,  data, compare) : NULL);
+    if (cmp < 0) return (tree->left  ? bin_search_tree_contains(tree->left,  data, compare) : NULL);
     return (tree->right ? bin_search_tree_contains(tree->right, data, compare) : NULL);
 }
 
@@ -226,16 +225,17 @@ void bin_search_tree_delete_node(
     if (curr->left == NULL && curr->right == NULL) {
         if (parent != NULL) {
             if (parent->left == curr) parent->left = NULL;
-            else                       parent->right = NULL;
+            else parent->right = NULL;
 
             if (deep_free) deep_free(curr->data);
-            else           free(curr->data);
+            else free(curr->data);
 
             free(curr);
         } else {
             // leaf root -> sentinelize (keep root pointer stable)
             if (deep_free) deep_free(curr->data);
-            else           free(curr->data);
+            else free(curr->data);
+
             curr->data = NULL;
             curr->data_size = 0;
             // left/right already NULL (leaf)
@@ -248,11 +248,16 @@ void bin_search_tree_delete_node(
         if (parent != NULL) {
             // reconnect parent to the unique child
             BinarySearchTreeNode* only_child = (curr->left ? curr->left : curr->right);
-            if (parent->left == curr) parent->left = only_child;
-            else                       parent->right = only_child;
 
-            if (deep_free) deep_free(curr->data);
-            else           free(curr->data);
+            if (parent->left == curr) {
+                parent->left = only_child;
+            } else { parent->right = only_child; }
+
+            if (deep_free) {
+                deep_free(curr->data);
+            } else {
+                free(curr->data);
+            }
 
             free(curr);
             return;
@@ -262,8 +267,11 @@ void bin_search_tree_delete_node(
             BinarySearchTreeNode* victim = (curr->left ? curr->left : curr->right);
 
             // free old root payload first
-            if (deep_free) deep_free(curr->data);
-            else           free(curr->data);
+            if (deep_free) {
+                deep_free(curr->data);
+            } else {
+                free(curr->data);
+            }
 
             // transfer ownership of victim payload into root
             curr->data      = victim->data;
@@ -407,7 +415,7 @@ void bin_search_tree_rebalance(BinarySearchTree tree){
     }
 
     // link balanced left/right subtrees from slices excluding the root
-    BinarySearchTreeNode* new_left  = (r > 0)     ? bst_link_balanced(nodes, 0,        (long)r - 1) : NULL;
+    BinarySearchTreeNode* new_left  = (r > 0) ? bst_link_balanced(nodes, 0, (long)r - 1) : NULL;
     BinarySearchTreeNode* new_right = (r + 1 < n) ? bst_link_balanced(nodes, (long)r + 1, (long)n - 1) : NULL;
 
     // attach to the original root object
