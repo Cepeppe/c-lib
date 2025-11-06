@@ -41,7 +41,7 @@ Le sezioni sono organizzate per aree di utilità.
 - Funzioni `min` / `max` sicure
 - Media, varianza, deviazione standard su array di numeri
 - Interpolazione lineare
-- Conversioni tra tipi numerici e stringa (es. int32 ↔ stringa decimale ↔ stringa esadecimale)
+- Conversioni tra tipi numerici e stringa (es. int32 <-> stringa decimale <-> stringa esadecimale)
 
 ---
 

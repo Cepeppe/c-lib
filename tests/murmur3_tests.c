@@ -11,7 +11,7 @@ static void hex128(uint32_t hash[4], char *buf) {
 }
 
 int test_murmur3(void) {
-    printf("[TEST] murmur3 creator library tests...\n");
+    printf("[TEST] testing murmur3...\n");
     int passed = 0, failed = 0;
 
     #define TESTHASH(arch, nbytes, seed, str, expected) {               \
@@ -42,9 +42,9 @@ int test_murmur3(void) {
     TESTHASH(x64, 128, 123, "", "4cd9597081679d1abd92f8784bace33d");
 
     if(failed == 0)
-        printf("[OK] murmur3 creator library tests.  Total tests: %i | Passed: %i | Failed: %i\n", passed + failed, passed, failed);
+        printf("[TEST OK] murmur3: passed: %i failed: %i\n", passed, failed);
     else 
-        printf("[TEST FAIL] murmur3 creator library tests failed.  Total tests: %i | Passed: %i | Failed: %i\n", passed + failed, passed, failed);
+        printf("[TEST FAIL] murmur3: passed: %i failed: %i\n", passed, failed);
     
     return failed > 0;
 }

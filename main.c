@@ -9,6 +9,7 @@ int run_tests(){
     
     run_all_linked_list_tests();
     run_all_hashmap_tests();
+    test_murmur3();
 }
 
 int main(void) {
