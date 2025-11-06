@@ -1,18 +1,53 @@
+#include <stdlib.h>
+#include <string.h>
 #include "binary_tree.h"
 
-/**
- *   @brief Builds new empty BST.
- *   @return pointer to new allocated BST
+/*
+ * BST implementation — ownership transfer + swap (no byte copying)
+ *
+ * - Insert takes ownership of the heap pointer passed by the caller.
+ * - Internal operations move payloads by swapping node->data / node->data_size.
+ * - The root pointer is never replaced; an empty tree is a sentinel root.
+ * - deep_free is optional; if NULL, plain free() is used to release payloads.
  */
+
+/* =============================== internal helpers =============================== */
+static size_t bst_count_nodes(BinarySearchTreeNode* n);
+static void   bst_fill_nodes_inorder(BinarySearchTreeNode* n, BinarySearchTreeNode** arr, size_t* idx);
+static BinarySearchTreeNode* bst_link_balanced(BinarySearchTreeNode** arr, long lo, long hi);
+static inline void bst_swap_payload(BinarySearchTreeNode* a, BinarySearchTreeNode* b);
+static void   bst_default_preview(const void* data, size_t size);
+static void   bst_print_node_line(BinarySearchTreeNode* n, void (*print_data)(const void*, size_t));
+static void   bst_print_rec(BinarySearchTreeNode* n, const char* prefix, int is_right, void (*print_data)(const void*, size_t));
+
+/* =============================== constructors/lookup =============================== */
+
 BinarySearchTreeNode* bin_search_tree_build_empty(){
     BinarySearchTreeNode* tree = malloc(sizeof(BinarySearchTreeNode));
-    if(tree==NULL){
+    if (tree == NULL){
         fprintf(stderr, "Failed bin_search_tree_build_empty: malloc failed\n");
         exit(BINARY_SEARCH_TREE_ALLOCATION_FAILED);
     }
-    tree->data_size=0;
-    tree->data=NULL;
+    tree->data_size = 0;
+    tree->data      = NULL;
     tree->left = tree->right = NULL;
+    return tree;
+}
+
+BinarySearchTreeNode* bin_search_tree_alloc_node(){
+    BinarySearchTreeNode* tree = malloc(sizeof(BinarySearchTreeNode));
+    if (tree == NULL){
+        fprintf(stderr, "Failed malloc at bin_search_tree_alloc_node\n");
+        exit(BINARY_SEARCH_TREE_NODE_ALLOCATION_FAILED);
+    }
+    tree->data = NULL;
+    tree->left = tree->right = NULL;
+    tree->data_size = 0;
+    return tree;
+}
+
+int is_bin_search_tree_null(BinarySearchTree tree){
+    return tree == NULL;
 }
 
 /**
@@ -22,13 +57,13 @@ BinarySearchTreeNode* bin_search_tree_build_empty(){
  * @complexity O(h) time; recursive where h = height.
  */
 BinarySearchTreeNode* bin_search_tree_contains(
-    BinarySearchTree tree, 
-    const void *data, 
-    int (*compare)(const void* data_1, const void* data_2)
-){  
+    BinarySearchTree tree,
+    const void *data,
+    bst_compare_fn compare
+){
     if (is_bin_search_tree_null(tree)){
         fprintf(stderr, "Failed bin_search_tree_contains: invoked on a NULL binary search tree, you have to allocate it before using it\n");
-        exit(BINARY_SEARCH_TREE_NOT_INIZIALIZED);
+        exit(BINARY_SEARCH_TREE_NOT_INITIALIZED);
     }
     if (data == NULL){
         fprintf(stderr, "Failed bin_search_tree_contains: invoked with data=NULL\n");
@@ -39,53 +74,41 @@ BinarySearchTreeNode* bin_search_tree_contains(
         exit(BINARY_SEARCH_TREE_CONTAINS_FAILED);
     }
 
-    int compare_curr_node_res = compare(data, tree->data);
-    if (compare_curr_node_res == 0) return tree;
-    if (compare_curr_node_res < 0)
-        return (tree->left  != NULL ? bin_search_tree_contains(tree->left,  data, compare) : NULL);
-    return (tree->right != NULL ? bin_search_tree_contains(tree->right, data, compare) : NULL);
-}
-
-/**
- * @brief Allocate an empty BST node (data=NULL, size=0, no children).
- * - Exits on allocation failure.
- * @return Pointer to a zero-initialized node.
- * @complexity O(1).
- */
-BinarySearchTreeNode* bin_search_tree_alloc_node(){
-    BinarySearchTreeNode* tree;
-
-    tree = malloc(sizeof(BinarySearchTreeNode));
-    if (tree == NULL){
-        fprintf(stderr, "Failed malloc at bin_search_tree_alloc_node\n");
-        exit(BINARY_SEARCH_TREE_NODE_ALLOCATION_FAILED);
+    // handle sentinel root (empty tree)
+    if (tree->data == NULL) {
+        if (tree->left != NULL || tree->right != NULL){
+            fprintf(stderr, "Failed bin_search_tree_contains: malformed tree (root->data == NULL with children)\n");
+            exit(MALFORMED_BINARY_SEARCH_TREE);
+        }
+        return NULL; // empty tree: not found
     }
 
-    tree->data = NULL;
-    tree->left = tree->right = NULL;
-    tree->data_size = 0;
-
-    return tree;
+    int cmp = compare(data, tree->data);
+    if (cmp == 0) return tree;
+    if (cmp < 0)
+        return (tree->left  ? bin_search_tree_contains(tree->left,  data, compare) : NULL);
+    return (tree->right ? bin_search_tree_contains(tree->right, data, compare) : NULL);
 }
 
+/* ==================================== insert ==================================== */
 /**
- * @brief Insert a value into the BST, deep-copying the payload.
- * - Requires a pre-allocated empty root (bin_search_tree_alloc_node()).
- * - Descends with compare(data, node->data); duplicates are not inserted.
- * - Copies bytes via clone_bytes; tree owns the copy (free in destroy).
+ * @brief Insert a value into the BST, transferring ownership of `data` to the tree.
+ *        No bytes are copied. The caller must not free or use `data` after insertion.
+ *        Requires a pre-allocated empty root (bin_search_tree_alloc_node()).
+ *        Duplicates are not inserted (returns the existing node).
  * @param tree Non-NULL BST root (may be empty sentinel).
  * @return Pointer to node holding data (existing or newly created).
  * @complexity O(h) time; recursive where h = height.
  */
 BinarySearchTreeNode* bin_search_tree_insert_node(
-    BinarySearchTree tree, 
-    const void* data, 
-    size_t data_size, 
-    int (*compare)(const void* data_1, const void* data_2)
+    BinarySearchTree tree,
+    void *data,
+    size_t data_size,
+    bst_compare_fn compare
 ){
     if (is_bin_search_tree_null(tree)) {
         fprintf(stderr, "Failed bin_search_tree_insert_node: invoked on a NULL binary search tree\n");
-        exit(BINARY_SEARCH_TREE_NOT_INIZIALIZED);
+        exit(BINARY_SEARCH_TREE_NOT_INITIALIZED);
     }
     if (compare == NULL){
         fprintf(stderr, "Failed bin_search_tree_insert_node: NULL compare function\n");
@@ -100,61 +123,62 @@ BinarySearchTreeNode* bin_search_tree_insert_node(
         exit(BINARY_SEARCH_TREE_INSERT_FAILED);
     }
 
+    // empty sentinel root -> store payload directly (ownership transfer)
     if (tree->data == NULL){
-        if (tree->left != NULL || tree->right != NULL){  
-            fprintf(stderr, "Failed bin_search_tree_insert_node: invoked on a malformed tree having node->data NULL and left and/or right not NULL\n");
+        if (tree->left != NULL || tree->right != NULL){
+            fprintf(stderr, "Failed bin_search_tree_insert_node: malformed tree (root->data==NULL with children)\n");
             exit(MALFORMED_BINARY_SEARCH_TREE);
-        } else if (tree->left == NULL && tree->right == NULL){
-            tree->data = clone_bytes(data, data_size);
-            tree->data_size = data_size;
-            return tree;
         }
+        tree->data = data;        // take ownership
+        tree->data_size = data_size;
+        return tree;
     }
 
-    int compare_curr_node_res = compare(data, tree->data);
-    if (compare_curr_node_res == 0) return tree; // already contained
+    int cmp = compare(data, tree->data);
+    if (cmp == 0) return tree; // already contained: caller must free his `data` to avoid leak
 
-    if (compare_curr_node_res < 0){
+    if (cmp < 0){
         if (tree->left == NULL){ // insert here
             tree->left = bin_search_tree_alloc_node();
-            tree->left->data = clone_bytes(data, data_size);
+            tree->left->data      = data;       // take ownership
             tree->left->data_size = data_size;
             return tree->left;
         } else { // recurse left
             return bin_search_tree_insert_node(tree->left, data, data_size, compare);
         }
-    } else { // compare_curr_node_res > 0
+    } else { // cmp > 0
         if (tree->right == NULL){ // insert here
             tree->right = bin_search_tree_alloc_node();
-            tree->right->data = clone_bytes(data, data_size);
+            tree->right->data      = data;      // take ownership
             tree->right->data_size = data_size;
             return tree->right;
         } else { // recurse right
             return bin_search_tree_insert_node(tree->right, data, data_size, compare);
         }
     }
-
-    // Unreachable
-    return NULL;
 }
 
+/* ==================================== delete ==================================== */
 /*
-    Deletes node containing data (if present).
-    Keeps the same root pointer (even when deleting the root).
-    Notes:
-    - deep_free_bin_search_tree_node_data is OPTIONAL: if NULL, plain free() is used on payload.
-      This is safe for byte-buffers cloned via clone_bytes, but may leak for complex non-primitive payloads.
+   Deletes node containing `data` (if present).
+   Preserves the same root pointer (even when deleting the root).
+
+   Ownership notes:
+   - Each payload is owned by exactly one node.
+   - On deletion, the node being physically removed frees its owned payload
+     (deep_free if provided, else free()).
+   - In two-children case, payloads are swapped before removing the successor,
+     so the freed payload is the one currently stored in the node being removed.
 */
 void bin_search_tree_delete_node(
-    BinarySearchTree tree, 
-    const void* data, 
-    int (*compare)(const void* data_1, const void* data_2),
-    void (*deep_free_bin_search_tree_node_data)(void* data)
+    BinarySearchTree tree,
+    const void* data,
+    bst_compare_fn compare,
+    bst_free_fn deep_free
 ){
-
     if (is_bin_search_tree_null(tree)){
         fprintf(stderr, "Failed bin_search_tree_delete_node: invoked on a NULL binary search tree, you have to allocate it before using it\n");
-        exit(BINARY_SEARCH_TREE_NOT_INIZIALIZED);
+        exit(BINARY_SEARCH_TREE_NOT_INITIALIZED);
     }
     if (data == NULL){
         fprintf(stderr, "Failed bin_search_tree_delete_node: invoked with data=NULL\n");
@@ -165,235 +189,333 @@ void bin_search_tree_delete_node(
         exit(BINARY_SEARCH_TREE_DELETE_FAILED);
     }
 
-    /* root sentinel (empty tree) handling */
+    // empty tree sentinel
     if (tree->data == NULL) {
         if (tree->left != NULL || tree->right != NULL){
             fprintf(stderr, "Failed bin_search_tree_delete_node: malformed tree (root->data == NULL with children)\n");
             exit(MALFORMED_BINARY_SEARCH_TREE);
         }
-        fprintf(stderr, "You tried to remove data from an empty bin_search_tree_delete_node. This is a no-op\n");
+        fprintf(stderr, "You tried to remove data from an empty binary search tree. This is a no-op\n");
         return;
     }
 
     // 1) find the node (iterative)
     BinarySearchTreeNode* parent = NULL;
-    BinarySearchTreeNode* curr_node = tree;
-    int compare_res;
+    BinarySearchTreeNode* curr   = tree;
 
     while (1) {
-        if (curr_node->data == NULL) {
+        if (curr->data == NULL) {
             fprintf(stderr, "Failed bin_search_tree_delete_node: malformed tree (encountered node->data == NULL)\n");
             exit(MALFORMED_BINARY_SEARCH_TREE);
         }
+        int cmp = compare(data, curr->data);
+        if (cmp == 0) break;
 
-        compare_res = compare(data, curr_node->data);
-        if (compare_res == 0) break;
-
-        if (compare_res < 0) {
-            if (curr_node->left == NULL) return; // not found
-            parent = curr_node;
-            curr_node = curr_node->left;
-        } else { // compare_res > 0
-            if (curr_node->right == NULL) return; // not found 
-            parent = curr_node;
-            curr_node = curr_node->right;
+        if (cmp < 0) {
+            if (curr->left == NULL) return; // not found
+            parent = curr;
+            curr   = curr->left;
+        } else { // cmp > 0
+            if (curr->right == NULL) return; // not found
+            parent = curr;
+            curr   = curr->right;
         }
     }
 
-    /* 2) deletion cases */
-
     /* Case A: leaf */
-    if (curr_node->left == NULL && curr_node->right == NULL) {
+    if (curr->left == NULL && curr->right == NULL) {
+        if (parent != NULL) {
+            if (parent->left == curr) parent->left = NULL;
+            else                       parent->right = NULL;
 
-        if (parent != NULL) { /* disconnect from parent */
-            if (parent->left == curr_node) {
-                parent->left = NULL;
-            } else { 
-                parent->right = NULL;
-            }
+            if (deep_free) deep_free(curr->data);
+            else           free(curr->data);
 
-            // free data (optional callback)
-            if (deep_free_bin_search_tree_node_data != NULL){
-                deep_free_bin_search_tree_node_data(curr_node->data);
-            } else { 
-                free(curr_node->data); 
-            }
-            //free node after freeing data
-            free(curr_node);
+            free(curr);
         } else {
-            // leaf root -> turn root into sentinel (keep tree pointer stable)
-            if (deep_free_bin_search_tree_node_data != NULL){ 
-                deep_free_bin_search_tree_node_data(curr_node->data);
-            } else { 
-                free(curr_node->data);
-            }
-
-            curr_node->data = NULL;
-            curr_node->data_size = 0;
+            // leaf root -> sentinelize (keep root pointer stable)
+            if (deep_free) deep_free(curr->data);
+            else           free(curr->data);
+            curr->data = NULL;
+            curr->data_size = 0;
+            // left/right already NULL (leaf)
         }
         return;
     }
 
-    // Case B: exactly one child 
-    if (curr_node->left == NULL || curr_node->right == NULL) {
+    /* Case B: exactly one child */
+    if (curr->left == NULL || curr->right == NULL) {
+        if (parent != NULL) {
+            // reconnect parent to the unique child
+            BinarySearchTreeNode* only_child = (curr->left ? curr->left : curr->right);
+            if (parent->left == curr) parent->left = only_child;
+            else                       parent->right = only_child;
 
-        if (parent != NULL) { // reconnect parent with nephew ( parent->curr_node->nephew => parent->nephew )
-            if (parent->left == curr_node)
-                parent->left  = (curr_node->left != NULL) ? curr_node->left : curr_node->right;
-            else
-                parent->right = (curr_node->left != NULL) ? curr_node->left : curr_node->right;
+            if (deep_free) deep_free(curr->data);
+            else           free(curr->data);
 
-            if (deep_free_bin_search_tree_node_data != NULL){
-                deep_free_bin_search_tree_node_data(curr_node->data);
-            } else { free(curr_node->data); }
-
-            //free node
-            free(curr_node);
+            free(curr);
             return;
-        } else { // deleting root with one child: copy child's payload into root, adopt its children, free child
-            BinarySearchTreeNode* victim = (curr_node->left != NULL) ? curr_node->left : curr_node->right;
+        } else {
+            // deleting root with one child:
+            // move child's payload into root (ownership transfer) and free the child node
+            BinarySearchTreeNode* victim = (curr->left ? curr->left : curr->right);
 
-            if (deep_free_bin_search_tree_node_data != NULL){
-                deep_free_bin_search_tree_node_data(curr_node->data);
-            } else { free(curr_node->data); }
+            // free old root payload first
+            if (deep_free) deep_free(curr->data);
+            else           free(curr->data);
 
-            // copy payload
-            curr_node->data = clone_bytes(victim->data, victim->data_size);
-            curr_node->data_size = victim->data_size;
+            // transfer ownership of victim payload into root
+            curr->data      = victim->data;
+            curr->data_size = victim->data_size;
+            victim->data = NULL;        // avoid double-free
+            victim->data_size = 0;
 
-            // take over victim's children
-            curr_node->left  = victim->left;
-            curr_node->right = victim->right;
+            // adopt victim's children
+            curr->left  = victim->left;
+            curr->right = victim->right;
 
-            // free victim payload via callback if provided, else free()
-            if (deep_free_bin_search_tree_node_data != NULL){
-                deep_free_bin_search_tree_node_data(victim->data);
-            } else { free(victim->data); }
-
-            //free victim node
+            // free the victim node (no payload)
             free(victim);
             return;
         }
     }
 
-    //Case C: two children 
-    {   
-        // use in-order successor: minimum node in the right subtree of curr_node
-        BinarySearchTreeNode* succ = bin_search_tree_find_min(curr_node->right);
+    /* Case C: two children */
+    {
+        // find in-order successor (min in right subtree) and its parent
+        BinarySearchTreeNode* succ = bin_search_tree_find_min(curr->right);
 
-        // find successor's parent by walking left from curr_node->right until we reach succ
-        BinarySearchTreeNode* succ_parent = curr_node;  // default if succ == curr_node->right
-        if (succ != curr_node->right) {
-            succ_parent = curr_node->right;
+        BinarySearchTreeNode* succ_parent = curr;  // default if succ == curr->right
+        if (succ != curr->right) {
+            succ_parent = curr->right;
             while (succ_parent->left != succ) {
                 succ_parent = succ_parent->left;
             }
         }
 
-        // replace current node payload with successor payload (keep node to preserve root pointer)
-        if (deep_free_bin_search_tree_node_data != NULL) {
-            deep_free_bin_search_tree_node_data(curr_node->data);
-        } else {
-            free(curr_node->data);
-        }
-        curr_node->data = clone_bytes(succ->data, succ->data_size);
-        curr_node->data_size = succ->data_size;
+        // swap payloads (ownership moves with the pointer)
+        bst_swap_payload(curr, succ);
 
-        // unlink successor from its parent, reconnecting successor's right child (if any)
-        // NB: successor can only have a right child (never a left one)
-        BinarySearchTreeNode* succ_right = succ->right;
-        if (succ_parent == curr_node) {
-            // special case: successor is the immediate right child of curr_node
-            curr_node->right = succ_right;
+        // now remove successor node (it has at most a right child)
+        BinarySearchTreeNode* succ_repl = succ->right;  // replacement (could be NULL)
+        if (succ_parent == curr) {
+            curr->right = succ_repl;
         } else {
-            // general case: successor lies somewhere below curr_node->right
-            succ_parent->left = succ_right;
+            succ_parent->left = succ_repl;
         }
 
-        // free the successor node (its payload has been cloned into curr_node)
-        if (deep_free_bin_search_tree_node_data != NULL) {
-            deep_free_bin_search_tree_node_data(succ->data);
-        } else {
-            free(succ->data);
-        }
+        // free successor's payload (which is the original curr payload after swap) and the node
+        if (deep_free) deep_free(succ->data);
+        else           free(succ->data);
         free(succ);
-
         return;
     }
 }
 
-/**
- * Find the minimum node in a BST (leftmost node).
- * Requires a non-NULL, non-empty tree (tree->data != NULL).
- * Exits on uninitialized/empty tree per project policy.
- * @return Pointer to the minimum node.
- * 
- * complexity O(h) time, iterative.
- */
+/* ==================================== min/max ==================================== */
+
 BinarySearchTreeNode* bin_search_tree_find_min(BinarySearchTree tree) {
     if (is_bin_search_tree_null(tree)) {
         fprintf(stderr, "Failed bin_search_tree_find_min: invoked on a NULL binary search tree, you have to allocate it before using it\n");
-        exit(BINARY_SEARCH_TREE_NOT_INIZIALIZED);
+        exit(BINARY_SEARCH_TREE_NOT_INITIALIZED);
     }
     if (tree->data == NULL) {
         fprintf(stderr, "Failed bin_search_tree_find_min: invoked on an empty/malformed tree (root->data == NULL)\n");
         exit(MALFORMED_BINARY_SEARCH_TREE);
     }
-
     BinarySearchTreeNode* cur = tree;
-    while (cur->left != NULL) cur = cur->left;
+    while (cur->left) cur = cur->left;
     return cur;
 }
 
-
-/**
- * Find the maximum node in a BST (rightmost node).
- * Requires non-NULL, non-empty tree (tree->data != NULL). Exits on violation.
- * @return Pointer to the maximum node. 
- * 
- * complexity O(h) time, iterative.
- */
 BinarySearchTreeNode* bin_search_tree_find_max(BinarySearchTree tree) {
     if (is_bin_search_tree_null(tree)) {
         fprintf(stderr, "Failed bin_search_tree_find_max: tree is NULL\n");
-        exit(BINARY_SEARCH_TREE_NOT_INIZIALIZED);
+        exit(BINARY_SEARCH_TREE_NOT_INITIALIZED);
     }
     if (tree->data == NULL) {
         fprintf(stderr, "Failed bin_search_tree_find_max: empty/malformed tree (root->data == NULL)\n");
         exit(MALFORMED_BINARY_SEARCH_TREE);
     }
-
     BinarySearchTreeNode* cur = tree;
-    while (cur->right != NULL) cur = cur->right;
+    while (cur->right) cur = cur->right;
     return cur;
 }
 
-
+/* =================================== destroy =================================== */
 /**
  * @brief Recursively destroy the BST (post-order).
- * - If provided, calls deep_free_bin_search_tree_node_data(node->data) before freeing the node.
+ * - If provided, calls deep_free(node->data) before freeing the node.
+ * - If deep_free is NULL, payload is freed with plain free().
  * - No-op (with warning) if tree is NULL.
  * @complexity O(n) time; O(h) stack.
  */
-void binary_search_tree_destroy(BinarySearchTree tree, void (*deep_free_bin_search_tree_node_data)(void* data)){
-    if(tree == NULL) {
+void binary_search_tree_destroy(BinarySearchTree tree, bst_free_fn deep_free){
+    if (tree == NULL) {
         fprintf(stderr, "You are trying to destroy a non-initialized binary search tree, this is a no-op\n");
         return;
     }
 
-    binary_search_tree_destroy(tree->left,  deep_free_bin_search_tree_node_data);
-    binary_search_tree_destroy(tree->right, deep_free_bin_search_tree_node_data);
+    binary_search_tree_destroy(tree->left,  deep_free);
+    binary_search_tree_destroy(tree->right, deep_free);
 
-    if (tree->data != NULL)
-        deep_free_bin_search_tree_node_data(tree->data);
-
+    if (tree->data != NULL){
+        if (deep_free) deep_free(tree->data);
+        else           free(tree->data);
+    }
     free(tree);
-    return;
 }
 
-/**
- * @brief Utility: return 1 if tree is NULL, 0 otherwise.
+/* =================================== rebalance =================================== */
+/*
+ * Rebalance in place: build a balanced shape by relinking existing node pointers.
+ * Payloads are never copied; ownership remains with the nodes that hold them.
+ * The root node object is preserved; its left/right get reassigned to balanced subtrees.
  */
-int is_bin_search_tree_null(BinarySearchTree tree){
-    return tree==NULL;
+void bin_search_tree_rebalance(BinarySearchTree tree){
+    if (is_bin_search_tree_null(tree)){
+        fprintf(stderr, "Failed bin_search_tree_rebalance: invoked on a NULL binary search tree, you have to allocate it before using it\n");
+        exit(BINARY_SEARCH_TREE_NOT_INITIALIZED);
+    }
+    if (tree->data == NULL){
+        if (tree->left != NULL || tree->right != NULL){
+            fprintf(stderr, "Failed bin_search_tree_rebalance: malformed tree (root->data == NULL with children)\n");
+            exit(MALFORMED_BINARY_SEARCH_TREE);
+        }
+        return; // empty sentinel: nothing to do
+    }
+
+    size_t n = bst_count_nodes(tree);
+    if (n <= 1) return;
+
+    // collect nodes in-order (sorted by key)
+    BinarySearchTreeNode** nodes = (BinarySearchTreeNode**) malloc(n * sizeof(BinarySearchTreeNode*));
+    if (!nodes){
+        fprintf(stderr, "Failed bin_search_tree_rebalance: malloc nodes failed\n");
+        exit(BINARY_SEARCH_TREE_NODE_ALLOCATION_FAILED);
+    }
+    size_t idx = 0;
+    bst_fill_nodes_inorder(tree, nodes, &idx);
+
+    // find root index in in-order list
+    size_t r = 0;
+    while (r < n && nodes[r] != tree) ++r;
+    if (r == n){
+        fprintf(stderr, "Failed bin_search_tree_rebalance: root not found in traversal\n");
+        exit(MALFORMED_BINARY_SEARCH_TREE);
+    }
+
+    // link balanced left/right subtrees from slices excluding the root
+    BinarySearchTreeNode* new_left  = (r > 0)     ? bst_link_balanced(nodes, 0,        (long)r - 1) : NULL;
+    BinarySearchTreeNode* new_right = (r + 1 < n) ? bst_link_balanced(nodes, (long)r + 1, (long)n - 1) : NULL;
+
+    // attach to the original root object
+    tree->left  = new_left;
+    tree->right = new_right;
+
+    free(nodes);
+}
+
+/* ================================= pretty print ================================= */
+
+void bin_search_tree_pretty_print(
+    BinarySearchTree tree,
+    void (*print_data)(const void* data, size_t size) // optional, can be NULL
+){
+    if (is_bin_search_tree_null(tree)){
+        fprintf(stderr, "Failed bin_search_tree_pretty_print: invoked on a NULL binary search tree, you have to allocate it before using it\n");
+        exit(BINARY_SEARCH_TREE_NOT_INITIALIZED);
+    }
+    if (tree->data == NULL){
+        if (tree->left != NULL || tree->right != NULL){
+            fprintf(stderr, "Failed bin_search_tree_pretty_print: malformed tree (root->data == NULL with children)\n");
+            exit(MALFORMED_BINARY_SEARCH_TREE);
+        }
+        printf("(empty BST)\n");
+        return;
+    }
+
+    // root line
+    bst_print_node_line(tree, print_data);
+    // print right subtree above, left below
+    if (tree->right) bst_print_rec(tree->right, "", 1, print_data);
+    if (tree->left)  bst_print_rec(tree->left,  "", 0, print_data);
+}
+
+/* =========================== utility helper functions =========================== */
+
+// in-order count (only proper nodes: data != NULL)
+static size_t bst_count_nodes(BinarySearchTreeNode* n){
+    if (!n) return 0;
+    if (n->data == NULL){
+        if (n->left != NULL || n->right != NULL){
+            fprintf(stderr, "Failed bin_search_tree_rebalance: encountered node with data==NULL and children\n");
+            exit(MALFORMED_BINARY_SEARCH_TREE);
+        }
+        return 0; // sentinel-like node (should happen only at root if empty)
+    }
+    return 1 + bst_count_nodes(n->left) + bst_count_nodes(n->right);
+}
+
+// in-order fill: node pointers
+static void bst_fill_nodes_inorder(BinarySearchTreeNode* n, BinarySearchTreeNode** arr, size_t* idx){
+    if (!n) return;
+    bst_fill_nodes_inorder(n->left, arr, idx);
+    if (n->data != NULL) arr[(*idx)++] = n;
+    bst_fill_nodes_inorder(n->right, arr, idx);
+}
+
+// build balanced shape from [lo..hi] array of nodes
+static BinarySearchTreeNode* bst_link_balanced(BinarySearchTreeNode** arr, long lo, long hi){
+    if (hi < lo) return NULL;
+    long mid = lo + (hi - lo) / 2;
+    BinarySearchTreeNode* root = arr[mid];
+    root->left  = bst_link_balanced(arr, lo,     mid - 1);
+    root->right = bst_link_balanced(arr, mid + 1, hi);
+    return root;
+}
+
+// swap payload pointers and sizes between two nodes
+static inline void bst_swap_payload(BinarySearchTreeNode* a, BinarySearchTreeNode* b){
+    void*  pd = a->data;      a->data = b->data;      b->data = pd;
+    size_t ps = a->data_size; a->data_size = b->data_size; b->data_size = ps;
+}
+
+// default hex preview for up to 8 bytes
+static void bst_default_preview(const void* data, size_t size){
+    const unsigned char* b = (const unsigned char*) data;
+    size_t lim = (size < 8 ? size : 8);
+    printf("0x");
+    for (size_t i = 0; i < lim; ++i) printf("%02X", b[i]);
+    if (size > lim) printf("…");
+}
+
+// one-line node info
+static void bst_print_node_line(BinarySearchTreeNode* n, void (*print_data)(const void*, size_t)){
+    printf("[node=%p size=%zu L=%p R=%p data=", (void*)n, n->data_size, (void*)n->left, (void*)n->right);
+    if (print_data) print_data(n->data, n->data_size);
+    else            bst_default_preview(n->data, n->data_size);
+    printf("]\n");
+}
+
+// recursive sideways printer (right on top, left below) with ASCII branches
+static void bst_print_rec(BinarySearchTreeNode* n, const char* prefix, int is_right, void (*print_data)(const void*, size_t)){
+    if (!n) return;
+
+    char next_prefix_right[512];
+    char next_prefix_left[512];
+    // keep vertical guidelines for the left branch of upper nodes
+    snprintf(next_prefix_right, sizeof(next_prefix_right), "%s%s", prefix, (is_right ? "    " : "│   "));
+    snprintf(next_prefix_left,  sizeof(next_prefix_left),  "%s%s", prefix, (is_right ? "    " : "│   "));
+
+    // print right subtree first (appears on top)
+    if (n->right) bst_print_rec(n->right, next_prefix_right, 1, print_data);
+
+    // current node line with branch
+    printf("%s%s", prefix, (is_right ? "└── " : "┌── "));
+    bst_print_node_line(n, print_data);
+
+    // left subtree
+    if (n->left)  bst_print_rec(n->left, next_prefix_left, 0, print_data);
 }
