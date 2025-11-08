@@ -9,14 +9,13 @@
 
 int run_tests(){
     run_all_matrix_tests();
-    return;
     run_all_bst_tests();
     run_all_linked_list_tests();
     run_all_hashmap_tests();
     test_murmur3();
+    return 0;
 }
 
 int main(void) {
-    run_tests();
-    return 0;
+    return run_tests();
 }

@@ -316,7 +316,7 @@ static void test_build_all_k_and_multiply_for_scalar(void) {
     destroy_matrix(M2);
 }
 
-/* ----- Multiplication: floating examples from the provided images ----- */
+/* ----- Multiplication: floating examples ----- */
 static void test_mul_f64_examples_decimals(void) {
     START_TEST("matrix_multiply_* (double) - examples with decimals");
 
@@ -370,7 +370,7 @@ static void test_mul_f64_examples_decimals(void) {
 
 /* ----- Multiplication: integer/simple cases for i64, u32, size_t ----- */
 static void test_mul_integers_simple_exact(void) {
-    START_TEST("matrix_multiply_* (integers) — simple exact");
+    START_TEST("matrix_multiply_* (integers) - simple exact");
 
     /* A(2x3) * B(3x2) with known result [[58,64],[139,154]] */
     const int64_t  Ai64[6] = {1,2,3, 4,5,6};
@@ -416,7 +416,6 @@ static void test_mul_long_double(void) {
     Matrix* Cn = matrix_multiply_ld_naive(M1,M2);
     Matrix* Cb = matrix_multiply_ld_blocked(M1,M2,64);
 
-    /* Usiamo confronto manuale con stampa in caso di differenze */
     int ok = (Cn && Cn->rows==2 && Cn->cols==2 && Cn->size_of_element==sizeof(long double));
     MAT_EXPECT(ok, "long double naive shape");
     if (ok) {
@@ -520,6 +519,184 @@ static void test_ops_mod100_u32(void) {
     destroy_matrix(C); destroy_matrix(M1); destroy_matrix(M2);
 }
 
+/* ============================ VECTORS & LARGE PERF ============================ */
+/* NOTE: everything below is self-contained and only uses the public multiply API.
+ * - test_vector_matrix_cases(): covers row*matrix, matrix*col, dot (1xN·Nx1) and outer (Nx1·1xN)
+ * - test_large_rectangular_perf(): builds 256x10 · 10x100 with deterministic random doubles,
+ *   validates naive vs blocked (same numeric result within tol) and prints timings.
+ */
+
+/* ---------- Small helpers: high-res wall clock (ms), deterministic PRNG, fillers ---------- */
+
+static double mm_now_ms(void) {
+#if defined(_WIN32)
+    static double s_ticks_to_ms = 0.0;
+    if (s_ticks_to_ms == 0.0) {
+        LARGE_INTEGER f;
+        QueryPerformanceFrequency(&f);         /* ticks per secondo */
+        s_ticks_to_ms = 1000.0 / (double)f.QuadPart;
+    }
+    LARGE_INTEGER c;
+    QueryPerformanceCounter(&c);                /* ticks correnti */
+    return (double)c.QuadPart * s_ticks_to_ms;  /* ms */
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1e6;
+#endif
+}
+
+/* xorshift64* PRNG: deterministic across piattaforme */
+static uint64_t mm_xorshift64s(uint64_t *s) {
+    uint64_t x = *s;
+    x ^= x >> 12; x ^= x << 25; x ^= x >> 27;
+    *s = x;
+    return x * 2685821657736338717ULL;
+}
+
+/* uniform [0,1) con 53 bit di mantissa; poi mappiamo a [-1,1] */
+static double mm_rand_unit(uint64_t *s) {
+    /* prendi 53 bit e scala (1/2^53) */
+    const uint64_t r = mm_xorshift64s(s) >> 11;            /* 53 bit */
+    return (double)r * (1.0 / 9007199254740992.0);          /* 2^53 */
+}
+static double mm_rand_range_m1p1(uint64_t *s) {
+    return 2.0 * mm_rand_unit(s) - 1.0; /* [-1, 1] */
+}
+
+/* Riempi una matrix double con numeri in [-1,1] da seed deterministico */
+static void fill_random_f64_seed(Matrix *M, uint64_t seed) {
+    MAT_EXPECT(M && M->size_of_element == sizeof(double), "fill_random_f64_seed: elem size must be double");
+    uint64_t st = seed ? seed : 0xCAFEBABE12345678ULL;
+    double *d = (double*)M->data;
+    const size_t n = M->rows * M->cols;
+    for (size_t i = 0; i < n; ++i) d[i] = mm_rand_range_m1p1(&st);
+}
+
+/* ---------- Test: vector & matrix cases (double) ---------- */
+static void test_vector_matrix_cases(void) {
+    START_TEST("vector/matrix multiply cases (double)");
+
+    /* 1) Row vector (1x3) * Matrix (3x2) -> (1x2) */
+    const double R[3] = { 1.2, -0.5, 2.0 };                 /* 1x3 */
+    const double B[6] = { 2.0, -1.0,                        /* 3x2 */
+                          0.5,  1.5,
+                         -3.0,  0.7 };
+    const double Cref1[2] = { -3.85, -0.55 };               /* calcolato a mano */
+    Matrix *Mr = make_f64(1,3,R);
+    Matrix *Mb = make_f64(3,2,B);
+    Matrix *C1n = matrix_multiply_f64_naive(Mr, Mb);
+    Matrix *C1b = matrix_multiply_f64_blocked(Mr, Mb, 64);
+    expect_equal_f64(C1n, Cref1, 1,2, 1e-12, "row(1x3) * matrix(3x2)");
+    expect_equal_f64(C1b, Cref1, 1,2, 1e-12, "row(1x3) * matrix(3x2) [blocked]");
+    destroy_matrix(C1n); destroy_matrix(C1b);
+    destroy_matrix(Mr);  destroy_matrix(Mb);
+
+    /* 2) Matrix (2x3) * Column vector (3x1) -> (2x1) */
+    const double A2[6] = { 1.0, 0.0, 2.0,
+                          -1.0, 3.0, 0.5 };                 /* 2x3 */
+    const double c3[3] = { 0.2, -1.0, 0.5 };                /* 3x1 */
+    const double Cref2[2] = { 1.2, -2.95 };
+    Matrix *Ma = make_f64(2,3,A2);
+    Matrix *Mc = make_f64(3,1,c3);
+    Matrix *C2n = matrix_multiply_f64_naive(Ma, Mc);
+    Matrix *C2b = matrix_multiply_f64_blocked(Ma, Mc, 64);
+    expect_equal_f64(C2n, Cref2, 2,1, 1e-12, "matrix(2x3) * col(3x1)");
+    expect_equal_f64(C2b, Cref2, 2,1, 1e-12, "matrix(2x3) * col(3x1) [blocked]");
+    destroy_matrix(C2n); destroy_matrix(C2b);
+    destroy_matrix(Ma);  destroy_matrix(Mc);
+
+    /* 3) Dot product: (1x4) * (4x1) -> (1x1) */
+    const double r4[4] = { 1.0,  2.0, -3.0, 0.5 };          /* 1x4 */
+    const double c4[4] = { 2.0, -1.0,  4.0, 1.5 };          /* 4x1 */
+    const double Cref3[1] = { -11.25 };                     /* 1*2 + 2*(-1) + (-3)*4 + 0.5*1.5 */
+    Matrix *Mr4 = make_f64(1,4,r4);
+    Matrix *Mc4 = make_f64(4,1,c4);
+    Matrix *C3n = matrix_multiply_f64_naive(Mr4, Mc4);
+    Matrix *C3b = matrix_multiply_f64_blocked(Mr4, Mc4, 64);
+    expect_equal_f64(C3n, Cref3, 1,1, 1e-12, "dot: row(1x4) * col(4x1)");
+    expect_equal_f64(C3b, Cref3, 1,1, 1e-12, "dot [blocked]");
+    destroy_matrix(C3n); destroy_matrix(C3b);
+    destroy_matrix(Mr4); destroy_matrix(Mc4);
+
+    /* 4) Outer product: (3x1) * (1x4) -> (3x4) */
+    const double v3[3] = { 2.0, -1.0, 0.5 };                /* 3x1 */
+    const double w4[4] = { 3.0, -2.0, 0.0, 1.5 };           /* 1x4 */
+    const double Cref4[12] = {
+        6.0, -4.0, 0.0, 3.0,
+       -3.0,  2.0, 0.0,-1.5,
+        1.5, -1.0, 0.0, 0.75
+    };
+    Matrix *Mv  = make_f64(3,1,v3);
+    Matrix *Mw  = make_f64(1,4,w4);
+    Matrix *C4n = matrix_multiply_f64_naive(Mv, Mw);
+    Matrix *C4b = matrix_multiply_f64_blocked(Mv, Mw, 64);
+    expect_equal_f64(C4n, Cref4, 3,4, 1e-12, "outer: col(3x1) * row(1x4)");
+    expect_equal_f64(C4b, Cref4, 3,4, 1e-12, "outer [blocked]");
+    destroy_matrix(C4n); destroy_matrix(C4b);
+    destroy_matrix(Mv);  destroy_matrix(Mw);
+}
+
+/* ---------- Test: large rectangular perf (double) ---------- */
+static void test_large_rectangular_perf(void) {
+    START_TEST("large rectangular perf (double): 256x10 multiplied for 10x100");
+
+    const size_t M = 256, P = 10, N = 100;
+    Matrix *A = new_matrix(M, P, sizeof(double));
+    Matrix *B = new_matrix(P, N, sizeof(double));
+    MAT_EXPECT(A && B, "alloc A,B must succeed");
+    if (!A || !B) { if (A) destroy_matrix(A); if (B) destroy_matrix(B); return; }
+
+    /* deterministic data */
+    fill_random_f64_seed(A, 0xA1B2C3D4u);
+    fill_random_f64_seed(B, 0x1C2D3E4Fu);
+
+    /* naive */
+    double t0 = mm_now_ms();
+    Matrix *Cn = matrix_multiply_f64_naive(A, B);
+    double t1 = mm_now_ms();
+
+    /* blocked */
+    const size_t BS = 64;
+    double t2 = mm_now_ms();
+    Matrix *Cb = matrix_multiply_f64_blocked(A, B, BS);
+    double t3 = mm_now_ms();
+
+    MAT_EXPECT(Cn && Cb, "alloc Cn/Cb must succeed");
+    if (Cn && Cb) {
+        /* numeric verification */
+        const double *dn = (const double*)Cn->data;
+        const double *db = (const double*)Cb->data;
+        const size_t total = M * N;
+        int same = 1;
+        for (size_t i = 0; i < total; ++i) {
+            if (!nearly_equal(dn[i], db[i], 1e-12)) { /* strict tollerance */
+                same = 0;
+                MAT_EXPECT(0, "naive vs blocked mismatch");
+                printf("  first mismatch @ idx=%zu (r=%zu,c=%zu): naive=%.17g blocked=%.17g\n",
+                       i, i / N, i % N, dn[i], db[i]);
+                break;
+            }
+        }
+        if (same) MAT_EXPECT(1, "naive vs blocked equal within tol");
+    }
+
+    const double naive_ms   = (t1 - t0);
+    const double blocked_ms = (t3 - t2);
+    printf("  timings: naive=%.3f ms, blocked(BS=%zu)=%.3f ms, speedup x%.2f\n",
+           naive_ms, (size_t)BS, blocked_ms, (blocked_ms > 0.0) ? (naive_ms / blocked_ms) : 0.0);
+
+    if (Cn) destroy_matrix(Cn);
+    if (Cb) destroy_matrix(Cb);
+    destroy_matrix(A);
+    destroy_matrix(B);
+}
+
+/* Public thin wrapper (optional): can call this standalone if needed. */
+void run_matrix_large_perf_smoke(void) {
+    test_large_rectangular_perf();
+}
+
 /* ================================ entry point ================================ */
 
 void run_all_matrix_tests(void) {
@@ -541,6 +718,9 @@ void run_all_matrix_tests(void) {
     test_facade_and_mismatch_checks();
     test_naive_blocked_parity_small();
     test_ops_mod100_u32();
+    test_vector_matrix_cases();
+    test_large_rectangular_perf();
+
 
     /* mat_silence_stderr_end(); */
 

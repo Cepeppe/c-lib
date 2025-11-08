@@ -8,6 +8,12 @@
 
 /* ---- stderr silencer (same pattern used in BST tests) ---- */
 #if defined(_WIN32)
+  #ifndef NOMINMAX
+  #define NOMINMAX
+  #endif
+  #define WIN32_LEAN_AND_MEAN
+  #include <windows.h>   /* LARGE_INTEGER, QueryPerformance* */
+
   #include <io.h>
   #include <fcntl.h>
   #define MAT_DEV_NULL  "NUL"
@@ -20,6 +26,7 @@
 #else
   #include <unistd.h>
   #include <fcntl.h>
+  #include <time.h>      /* clock_gettime, struct timespec */
   #define MAT_DEV_NULL  "/dev/null"
   #define mat_dup       dup
   #define mat_dup2      dup2
