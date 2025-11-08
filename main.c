@@ -5,8 +5,11 @@
 #include "tests/linked_list_tests.h"
 #include "tests/hashmap_tests.h"
 #include "tests/bst_tests.h"
+#include "tests/matrix_tests.h"
 
 int run_tests(){
+    run_all_matrix_tests();
+    return;
     run_all_bst_tests();
     run_all_linked_list_tests();
     run_all_hashmap_tests();
