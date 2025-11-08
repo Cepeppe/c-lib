@@ -46,3 +46,5 @@ Desktop.ini
 
 # --- Local personal files you don't want in version control ---
 info1
+*.exe
+main.exe
